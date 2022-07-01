@@ -2,10 +2,12 @@ import random
 import string
 from datetime import datetime
 
-from flask import Blueprint, render_template, request
+from flask import Blueprint, render_template, request, redirect, url_for
 from flask_mail import Message
 from exts import mail, db
-from models import EmailCaptchaModel
+from models import EmailCaptchaModel, UserModel
+from .forms import RegisterForm
+
 
 bp = Blueprint("user",__name__,url_prefix="/user")
 
@@ -15,8 +17,21 @@ def login():
 
 
 
-@bp.route("/register")
+@bp.route("/register",methods=['GET','POST'])
 def register():
+    if request.method == "POST":
+        form = RegisterForm(request.form)
+        if form.validate():
+            email = form.email.data
+            username = form.username.data
+            password = form.password.data
+            user = UserModel(email=email,username=username,password=password)
+            db.session.add(user)
+            db.session.commit()
+            return redirect(url_for("user.login"))
+        else:
+            return redirect(url_for("user.register"))
+
     return render_template("register.html")
 
 
@@ -29,7 +44,7 @@ def send_mail():
     base_str = string.ascii_letters + string.digits
     code = ''.join(random.sample(base_str,4))
     message = Message(
-        subject="[小胖工具箱]注册验证码",
+        subject="【小胖工具箱】注册验证码",
         recipients=['2625112940@qq.com'],
         body=f"【小胖工具箱】您的注册验证码为:{code},请不要把验证码告诉任何人！"
     )
